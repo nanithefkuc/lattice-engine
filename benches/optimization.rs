@@ -202,7 +202,10 @@ fn benchmark_kernel_crossover() {
             let mut scalar_output = vec![0i64; input.len()];
             let mut scratch = Scratch::new(dim);
             let scalar = measured(|| {
-                for (src, dst) in input.chunks_exact(dim).zip(scalar_output.chunks_exact_mut(dim)) {
+                for (src, dst) in input
+                    .chunks_exact(dim)
+                    .zip(scalar_output.chunks_exact_mut(dim))
+                {
                     q.nearest(src, dst, &mut scratch).unwrap();
                 }
             });
