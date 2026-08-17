@@ -12,14 +12,18 @@ exclude = ["/.github", "/.plans"]
 
 [features]
 default = ["simd"]
-# Forwards dispatched real-vector transforms in `lattica`; this crate owns no
-# kernel yet, so selection stays single-source one crate down.
-simd = ["lattica/simd"]
+# The engine-owned decode-batch kernel over this crate's flat layout, plus
+# forwarded dispatched real-vector transforms in `lattica`. Selection stays
+# single-source through simdispatch.
+simd = ["lattica/simd", "dep:archmage", "dep:simdispatch"]
 # Unstable implementation APIs, exempt from compatibility guarantees.
 internals = []
 
 [dependencies]
 lattica = { git = "https://github.com/nanithefkuc/lattica", rev = "6178a525a34956af8d6c6eff54347bc76d23936e", default-features = false }
+# Same revisions `lattica` pins, so Cargo resolves one copy of each.
+archmage = { git = "https://github.com/nanithefkuc/archmage", rev = "de519319b5670d93f71dada4c49cdfd83c0fc0ec", optional = true }
+simdispatch = { git = "https://github.com/nanithefkuc/simdispatch", rev = "5940194107384953cd8cd9f45c8d902b26d5686e", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
@@ -31,6 +35,7 @@ harness = false
 [[bench]]
 name = "optimization"
 harness = false
+required-features = ["internals"]
 
 [lints.rust]
 missing_docs = "deny"

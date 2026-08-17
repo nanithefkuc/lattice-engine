@@ -4,6 +4,7 @@ use std::hint::black_box;
 use std::time::{Duration, Instant};
 
 use lattica::Basis;
+use lattice_engine::kernel::internals::round_plane_scalar;
 use lattice_engine::{
     AmbientScratch, An, BarnesWall16, Dn, DnPlus, EnumerationScratch, Enumerator, Leech24,
     Quantizer, Scratch, Zn, e8 as e8_quantizer, nearest_batch,
@@ -182,8 +183,80 @@ fn benchmark_quantizers() {
     }
 }
 
+fn benchmark_kernel_crossover() {
+    // Dispatched batch decode versus the scalar per-vector path, per family.
+    // The crossover sets `DISPATCH_MIN_VECTORS`; see BENCHMARKS.md.
+    println!("kernel,operation,dimension,family,vectors,total_ns");
+    let families: Vec<(&str, usize, Box<dyn Quantizer>)> = vec![
+        ("zn24", 24, Box::new(Zn::new(24).unwrap())),
+        ("dn24", 24, Box::new(Dn::new(24).unwrap())),
+        ("dnplus24", 24, Box::new(DnPlus::new(24).unwrap())),
+        ("e8", 8, Box::new(e8_quantizer())),
+    ];
+    for (name, dim, q) in families {
+        for vectors in [1usize, 2, 4, 8, 16, 32, 64, 257] {
+            let input: Vec<f64> = (0..dim * vectors)
+                .map(|index| f64::from(u32::try_from(index % 31).unwrap()) / 16.0 - 0.9375)
+                .collect();
+            let mut output = vec![0i64; input.len()];
+            let mut scalar_output = vec![0i64; input.len()];
+            let mut scratch = Scratch::new(dim);
+            let scalar = measured(|| {
+                for (src, dst) in input.chunks_exact(dim).zip(scalar_output.chunks_exact_mut(dim)) {
+                    q.nearest(src, dst, &mut scratch).unwrap();
+                }
+            });
+            let dispatched = measured(|| {
+                nearest_batch(
+                    q.as_ref(),
+                    black_box(&input),
+                    black_box(&mut output),
+                    black_box(&mut scratch),
+                )
+                .unwrap();
+            });
+            assert_eq!(output, scalar_output, "{name} at {vectors} vectors");
+            println!(
+                "kernel,scalar,{dim},{name},{vectors},{:.2}",
+                scalar.as_secs_f64() * 1e9
+            );
+            println!(
+                "kernel,dispatched,{dim},{name},{vectors},{:.2}",
+                dispatched.as_secs_f64() * 1e9
+            );
+        }
+    }
+    // The rounding primitive alone, both executors.
+    let plane: Vec<f64> = (0..24 * 257)
+        .map(|index| f64::from(u32::try_from(index % 31).unwrap()) / 16.0 - 0.9375)
+        .collect();
+    let mut rounded = vec![0i64; plane.len()];
+    let scalar = measured(|| round_plane_scalar(black_box(&plane), black_box(&mut rounded)));
+    let zn = Zn::new(24).unwrap();
+    let zn_ref: &dyn Quantizer = &zn;
+    let mut zn_scratch = Scratch::new(24);
+    let dispatched = measured(|| {
+        nearest_batch(
+            zn_ref,
+            black_box(&plane),
+            black_box(&mut rounded),
+            black_box(&mut zn_scratch),
+        )
+        .unwrap()
+    });
+    println!(
+        "kernel,round_plane_scalar,24,zn24,6168,{:.2}",
+        scalar.as_secs_f64() * 1e9
+    );
+    println!(
+        "kernel,round_plane_dispatched,24,zn24,6168,{:.2}",
+        dispatched.as_secs_f64() * 1e9
+    );
+}
+
 fn main() {
     benchmark_cvp();
     benchmark_named();
     benchmark_quantizers();
+    benchmark_kernel_crossover();
 }

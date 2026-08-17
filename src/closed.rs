@@ -21,6 +21,7 @@
 
 use super::{Quantizer, Scratch, validate};
 
+use crate::kernel::BatchFamily;
 use crate::round_away;
 use lattica::error::{DecodeError, LatticeError};
 
@@ -180,6 +181,10 @@ impl Quantizer for Zn {
         1
     }
 
+    fn batch_family(&self) -> Option<BatchFamily> {
+        Some(BatchFamily::Zn)
+    }
+
     fn nearest(
         &self,
         x: &[f64],
@@ -226,6 +231,10 @@ impl Quantizer for Dn {
 
     fn scale(&self) -> i64 {
         1
+    }
+
+    fn batch_family(&self) -> Option<BatchFamily> {
+        Some(BatchFamily::Dn)
     }
 
     fn nearest(
@@ -416,6 +425,10 @@ impl Quantizer for DnPlus {
 
     fn scale(&self) -> i64 {
         2
+    }
+
+    fn batch_family(&self) -> Option<BatchFamily> {
+        Some(BatchFamily::DnPlus)
     }
 
     fn nearest(

@@ -30,6 +30,13 @@ Initial release: the lattice decoding engine, extracted from `lattica`.
   generators, with budget exhaustion reported separately from word errors.
 - **`mod Λ`** with dithered modulo and `Scaled` lattices — the
   quantization-error side consumed by nested lattice codes.
+- **The first engine-owned decode kernel.** `nearest_batch` over the flat
+  batch layout dispatches a `simdispatch`-selected AVX2 pass for `Z^n`, `D_n`,
+  and `D_n^+`/`E_8`, bit-identical to the per-vector path on every input
+  including ties, with the documented partial-write error contract preserved
+  by full-batch pre-validation and fallback. Dispatch at 8 vectors or more;
+  measured wins up to 1.29x (`E_8` batches). Selection stays single-source;
+  `archmage` supplies the safe capability token.
 - **Construction A decoding** through the `CodeMembership` seam, which
   carries per-symbol costs so the decode is maximum-likelihood whenever the
   caller's code decoder is. The generator construction stays in `lattica`.

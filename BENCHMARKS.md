@@ -47,6 +47,43 @@ Decision: no dispatch or crossover changes. The extraction is
 performance-neutral; the first engine-owned kernel decision (06-optimizations
 P2 class) starts from these numbers.
 
+## Decode-batch kernel (first engine-owned kernel)
+
+Command, pinned to CPU 2:
+
+```sh
+taskset -c 2 cargo bench --bench optimization --features internals
+```
+
+Measured 2026-08-17 on the Intel Core Ultra 7 258V, `rustc 1.93.0`,
+`lattica` `6178a52` pinned, backend V3GfniCrypto (AVX2). The `kernel` rows
+compare the dispatched batch path against the scalar per-vector loop on the
+deterministic `(i % 31)/16 - 0.9375` corpus; outputs are asserted equal in
+the harness and by `tests/kernel.rs` across dims 2–24, counts 1–257, the tie
+set, negations, and poisoned batches.
+
+| Family | 8 | 16 | 64 | 257 |
+| --- | ---: | ---: | ---: | ---: |
+| `zn24` scalar / dispatched (ns) | 250 / 249 | 491 / 458 | 1931 / 1767 | 7725 / 7164 |
+| `dn24` | 421 / 367 | 775 / 694 | 3100 / 2681 | 12159 / 10830 |
+| `dnplus24` | 823 / 804 | 1639 / 1511 | 6458 / 6323 | 26253 / 25483 |
+| `e8` (dim 8) | 322 / 279 | 731 / 537 | 2430 / 1864 | 9673 / 7476 |
+
+Decision: dispatch at **8 vectors or more** (`DISPATCH_MIN_VECTORS = 8`) —
+the first count at which dispatched never loses (zn24 is break-even there;
+below 8 it pays the validation pre-scan without amortizing it). Wins at 257
+vectors: `e8` 1.29x, `Dn` 1.12x, `Z^n` 1.08x, `D_n^+` 1.03x.
+
+Two structural costs cap the win and are recorded, not hidden. The kernel
+pre-validates the whole buffer (`all_valid`) so a failing batch falls back to
+the documented per-vector partial-write contract — that scan is branchy
+scalar work the per-vector path also does, but it delays the SIMD start. And
+AVX2 has no packed `f64 -> i64` convert, so lane values finish through an
+exact per-tile scalar cast; the arithmetic is exact but the conversion is not
+vectorized. An AVX-512 tier (`archmage`'s `avx512` feature, `vcvtpd2qq`) is
+the measured follow-up that would remove both the cast bottleneck and part of
+the scan; it is future work, not landed.
+
 ## Barnes–Wall and Leech decoding beyond packing radius *(moved)*
 
 Command:

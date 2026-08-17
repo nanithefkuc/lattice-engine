@@ -73,6 +73,7 @@ pub mod closed;
 pub mod construction;
 pub mod enumerate;
 pub mod highdim;
+pub mod kernel;
 pub mod modulo;
 
 pub use closed::{An, Dn, DnPlus, Zn, e8, round_nearest, round_nearest_flipped};
@@ -81,6 +82,7 @@ pub use enumerate::{
     EnumerationScratch, Enumerator, ListPoint, PreparedEnumerationScratch, PreparedEnumerator,
 };
 pub use highdim::{AmbientScratch, BarnesWall16, Leech24};
+pub use kernel::BatchFamily;
 pub use modulo::{Scaled, mod_lattice, mod_lattice_dithered};
 
 /// The decode error vocabulary, shared with the arithmetic below.
@@ -164,6 +166,16 @@ impl Scratch {
             self.costs.resize(needed, 0.0);
         }
     }
+    /// Grows the batch planes to `len` for the decode kernels: the `x - ½`
+    /// allocates; a warm scratch never does.
+    pub(crate) fn ensure_batch(&mut self, len: usize) {
+        if self.shifted.len() < len {
+            self.shifted.resize(len, 0.0);
+        }
+        if self.alt.len() < len {
+            self.alt.resize(len, 0);
+        }
+    }
 }
 
 /// A closed-form nearest-point decoder for one lattice.
@@ -193,6 +205,17 @@ pub trait Quantizer {
     /// A rejected call leaves `out` untouched.
     fn nearest(&self, x: &[f64], out: &mut [i64], scratch: &mut Scratch)
     -> Result<(), DecodeError>;
+
+    /// The engine-owned batch kernel family for this decoder, if any.
+    ///
+    /// Decoders with a family accelerate [`nearest_batch`] with the kernels
+    /// in [`kernel`], bit-identical to the per-vector path on every input,
+    /// including ties. The default — no family — keeps the per-vector loop.
+    /// This is an internal acceleration seam, not a promise that a particular
+    /// kernel exists on any host.
+    fn batch_family(&self) -> Option<BatchFamily> {
+        None
+    }
 }
 
 /// A shared reference to a decoder is a decoder.
@@ -205,6 +228,9 @@ impl<Q: Quantizer + ?Sized> Quantizer for &Q {
     }
     fn scale(&self) -> i64 {
         (**self).scale()
+    }
+    fn batch_family(&self) -> Option<BatchFamily> {
+        (**self).batch_family()
     }
 
     fn nearest(
@@ -311,6 +337,11 @@ pub fn nearest_batch<Q: Quantizer + ?Sized>(
             expected: dim,
             found: points.len(),
         });
+    }
+    if let Some(family) = q.batch_family()
+        && kernel::decode_batch(family, dim, points, out, scratch)
+    {
+        return Ok(());
     }
     for (src, dst) in points.chunks_exact(dim).zip(out.chunks_exact_mut(dim)) {
         q.nearest(src, dst, scratch)?;

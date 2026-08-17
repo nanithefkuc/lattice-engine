@@ -222,8 +222,10 @@ dependencies = [
 name = "lattice-engine"
 version = "0.0.0"
 dependencies = [
+ "archmage",
  "criterion",
  "lattica",
+ "simdispatch",
 ]
 
 [[package]]

@@ -89,8 +89,9 @@ fn check_batch(name: &str, q: &dyn Quantizer, vectors: usize) {
     let mut out = vec![0i64; dim * vectors];
     let mut scratch = Scratch::new(dim);
 
-    // Warm every buffer to its high-water mark before measuring.
-    nearest_batch(q, &points[..dim], &mut out[..dim], &mut scratch).unwrap();
+    // Warm every buffer to its high-water mark before measuring, including
+    // the batch kernel planes, which grow to the full batch length once.
+    nearest_batch(q, &points, &mut out, &mut scratch).unwrap();
 
     let allocations = allocations_during(|| {
         nearest_batch(q, &points, &mut out, &mut scratch).unwrap();
