@@ -10,10 +10,42 @@ counts are properties of the algorithms, which moved verbatim. Post-move
 verification: `cargo run --release --example highdim_ml` reproduces the
 `Λ_24` word-error table exactly (385/2000 at radius 1.25, zero budget
 exhaustion), and `cargo run --release --example e8_awgn` passes the shaping
-gate. A bench smoke on the same host class (1 s warm-up, 2 s measurement)
-reproduced the CVP shape — warm medians 0.40/1.34/3.50 µs at dimensions
-8/16/24 on the easy/median classes — with identical deterministic
-fingerprints; a full re-baseline on a pinned core remains future work.
+gate. A full pinned-core re-baseline is recorded in the first section
+below.
+
+## Post-extraction re-baseline
+
+Commands, pinned to CPU 2:
+
+```sh
+taskset -c 2 cargo bench --bench optimization
+taskset -c 2 cargo bench --bench fplll_compare
+```
+
+Measured 2026-08-17 on the original Intel Core Ultra 7 258V, `rustc 1.93.0`,
+`lattica` `6178a52` pinned, after the `round_away` dedup. This is the
+regression gate for the extraction itself: same corpora, same fingerprints.
+
+The CVP comparison corpus reproduces the pre-move fingerprints *exactly*
+(target `-356691156`/`13549574`/`-217921229`, point `-364109`/`15984`/
+`-153113`, distance `20641984069`/`42334915811`/`61652689299` at dimensions
+8/16/24) with warm medians of `616.84 ns`, `5.014 µs`, and `25.662 µs`
+against the recorded in-`lattica` `0.635 µs`, `4.795 µs`, and `24.699 µs` —
+within ~3%, so the cross-crate boundary is performance-neutral. Cold medians:
+`1.510 µs`, `11.694 µs`, `45.919 µs`.
+
+The optimization corpus keeps its recorded structure: CVP preparation
+`1.021 µs`/`5.778 µs`/`18.395 µs` (recorded post-Bareiss:
+`1.098`/`6.558`/`21.134`); node counts identical — 8/12/16, 16/37/88, and
+24/133/402 on the easy/median/boundary classes; and the named decoders visit
+**18 nodes for `BW_16` and 19,202 for `Λ_24`**, exactly the recorded values,
+with setup medians of `55.8 µs` and `164.4 µs`. Closed-form batch decoding
+stays scalar and in family: `e8_257` at `10.07 µs`, `dn24_257` at
+`12.21 µs`, `an23_257` at `25.00 µs`.
+
+Decision: no dispatch or crossover changes. The extraction is
+performance-neutral; the first engine-owned kernel decision (06-optimizations
+P2 class) starts from these numbers.
 
 ## Barnes–Wall and Leech decoding beyond packing radius *(moved)*
 
