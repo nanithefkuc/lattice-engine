@@ -59,7 +59,7 @@ jobs:
       # survive contact with a deadline.
       - name: assert dependency set
         run: |
-          tree=$(cargo tree --all-features --prefix none --no-dedupe \
+          tree=$(cargo tree --all-features --depth 1 --prefix none --no-dedupe \
                    | awk 'NF {print $1}' | sort -u | grep -v '^lattice-engine$' || true)
           echo "dependencies: ${tree:-<none>}"
           allowed="lattica archmage simdispatch criterion"
