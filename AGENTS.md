@@ -22,9 +22,10 @@ a quantity, transform, certificate, or constructor of a lattice lives in
    real-vector kernels — is `lattica`'s at a pinned git revision. No local
    elimination, orthogonalization, or reduction. No `fgf`, `sgraph`, or `gfm`
    ever; CI fails the build if one appears.
-2. **No `unsafe`.** Forbidden at the crate root. SIMD is reached only through
-   `lattica`'s kernels — or, when the first engine-owned decode-layout kernel
-   lands, through `simdispatch` like every kernel owner.
+2. **No `unsafe`.** Forbidden at the crate root. SIMD is reached through
+   `archmage`'s safe intrinsics under `simdispatch` selection — the batch
+   decode kernel owns this crate's flat layout — and through `lattica`'s
+   kernels everywhere else.
 3. **Decision paths use add, subtract, compare, and round.** No `mul_add`, no
    transcendental, no reassociation, no `f64::round` anywhere a lattice point
    is chosen. Two peers must decode a boundary point identically; the

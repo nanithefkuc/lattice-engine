@@ -66,7 +66,7 @@ lattice-engine = { git = "https://github.com/nanithefkuc/lattice-engine" }
 
 | Feature | Result |
 | --- | --- |
-| default (`simd`) | forwards `lattica`'s dispatched real-vector kernels; the crate owns no kernel of its own yet, so backend selection stays single-source one crate down |
+| default (`simd`) | the engine-owned AVX2 batch-decode kernel over `nearest_batch`'s flat layout (`Z^n`, `D_n`, `D_n^+`/`E_8`; dispatched from 8 vectors, bit-identical to the scalar path), plus `lattica`'s dispatched real-vector kernels — selection single-source through `simdispatch` in both cases |
 | `internals` | unstable implementation APIs, exempt from compatibility guarantees |
 
 ## Building
