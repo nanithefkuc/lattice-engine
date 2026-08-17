@@ -37,7 +37,7 @@
 
 use core::num::NonZeroU32;
 
-use crate::{Quantizer, Scratch};
+use crate::{Quantizer, Scratch, round_away};
 use lattica::error::{DecodeError, LatticeError, Op, RangeError};
 use lattica::zq::Zq;
 
@@ -199,19 +199,5 @@ impl<C: CodeMembership> Quantizer for ConstructionA<C> {
         scratch.costs = costs;
         scratch.symbols = chosen;
         result
-    }
-}
-
-/// Nearest integer, ties away from zero.
-#[allow(clippy::cast_possible_truncation)]
-fn round_away(v: f64) -> i64 {
-    let truncated = v as i64;
-    let fraction = v - truncated as f64;
-    if fraction >= 0.5 {
-        truncated + 1
-    } else if fraction <= -0.5 {
-        truncated - 1
-    } else {
-        truncated
     }
 }

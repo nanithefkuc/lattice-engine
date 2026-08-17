@@ -20,29 +20,9 @@
 )]
 
 use super::{Quantizer, Scratch, validate};
-use lattica::error::{DecodeError, LatticeError};
 
-/// Nearest integer with ties away from zero, without `std`.
-///
-/// `f64::round` lives in `std`, and pulling in a libm dependency for one
-/// operation would be absurd. This is also a more faithful statement of the
-/// rule than `round` would be: truncation toward zero, an exact subtraction,
-/// and a comparison against a half. Every step is exact for inputs validated
-/// against [`super::COORD_LIMIT`] -- `v as i64` truncates exactly
-/// below `2^52`, and `v - t` is exact because the result is representable --
-/// so this uses only the operation set invariant I2 depends on.
-#[inline]
-fn round_away(v: f64) -> i64 {
-    let truncated = v as i64;
-    let fraction = v - truncated as f64;
-    if fraction >= 0.5 {
-        truncated + 1
-    } else if fraction <= -0.5 {
-        truncated - 1
-    } else {
-        truncated
-    }
-}
+use crate::round_away;
+use lattica::error::{DecodeError, LatticeError};
 
 /// Conway–Sloane `f`: coordinatewise nearest integer, ties away from zero.
 ///

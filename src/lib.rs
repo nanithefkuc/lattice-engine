@@ -203,7 +203,6 @@ impl<Q: Quantizer + ?Sized> Quantizer for &Q {
     fn dim(&self) -> usize {
         (**self).dim()
     }
-
     fn scale(&self) -> i64 {
         (**self).scale()
     }
@@ -215,6 +214,41 @@ impl<Q: Quantizer + ?Sized> Quantizer for &Q {
         scratch: &mut Scratch,
     ) -> Result<(), DecodeError> {
         (**self).nearest(x, out, scratch)
+    }
+}
+
+/// Nearest integer with ties away from zero, without `std`.
+///
+/// `f64::round` lives in `std`, and pulling in a libm dependency for one
+/// operation would be absurd. This is also a more faithful statement of the
+/// rule than `round` would be: truncation toward zero, an exact subtraction,
+/// and a comparison against a half. Every step is exact for inputs validated
+/// against [`COORD_LIMIT`] -- `v as i64` truncates exactly below `2^52`, and
+/// `v - t` is exact because the result is representable -- so this uses only
+/// the operation set invariant I1 depends on.
+///
+/// The saturation guard is for the enumeration path, which rounds *search
+/// centers* rather than validated inputs: a center beyond `i64`'s range
+/// saturates its cast, and `truncated ± 1` must not wrap. Below `2^63` the
+/// guard is unreachable, so every decoder shares one tie rule.
+#[inline]
+#[allow(
+    clippy::as_conversions,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss
+)]
+pub(crate) fn round_away(v: f64) -> i64 {
+    let truncated = v as i64;
+    if truncated == i64::MAX || truncated == i64::MIN {
+        return truncated;
+    }
+    let fraction = v - truncated as f64;
+    if fraction >= 0.5 {
+        truncated + 1
+    } else if fraction <= -0.5 {
+        truncated - 1
+    } else {
+        truncated
     }
 }
 

@@ -10,6 +10,7 @@
 use core::cmp::Ordering;
 
 use crate::COORD_LIMIT;
+use crate::round_away;
 use lattica::basis::Gram;
 use lattica::error::{DecodeError, Op, RangeError, ReduceError};
 use lattica::gso::Gso;
@@ -909,21 +910,5 @@ impl Iterator for Children {
             }
         }
         None
-    }
-}
-
-#[allow(clippy::cast_possible_truncation)]
-fn round_away(value: f64) -> i64 {
-    let truncated = value as i64;
-    if truncated == i64::MAX || truncated == i64::MIN {
-        return truncated;
-    }
-    let fraction = value - truncated as f64;
-    if fraction >= 0.5 {
-        truncated + 1
-    } else if fraction <= -0.5 {
-        truncated - 1
-    } else {
-        truncated
     }
 }

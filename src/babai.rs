@@ -26,24 +26,11 @@
 // never in a decision the exact path also makes.
 #![allow(clippy::as_conversions, clippy::cast_precision_loss)]
 
+use crate::round_away;
 use lattica::basis::Gram;
 use lattica::error::{DecodeError, ReduceError};
 use lattica::gso::Gso;
 use lattica::int::{Int, adjugate};
-
-/// Nearest integer, ties away from zero. See the crate documentation for why this rule.
-#[allow(clippy::cast_possible_truncation)]
-fn round_away(v: f64) -> i64 {
-    let truncated = v as i64;
-    let fraction = v - truncated as f64;
-    if fraction >= 0.5 {
-        truncated + 1
-    } else if fraction <= -0.5 {
-        truncated - 1
-    } else {
-        truncated
-    }
-}
 
 /// Converts inner products into basis coefficients: given `inner[i] = ⟨x, b_i⟩`,
 /// writes the real `t` with `x = Σ t_i b_i`.
