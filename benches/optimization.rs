@@ -245,7 +245,7 @@ fn benchmark_kernel_crossover() {
             black_box(&mut rounded),
             black_box(&mut zn_scratch),
         )
-        .unwrap()
+        .unwrap();
     });
     println!(
         "kernel,round_plane_scalar,24,zn24,6168,{:.2}",
