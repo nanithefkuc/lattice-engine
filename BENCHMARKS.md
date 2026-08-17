@@ -10,7 +10,10 @@ counts are properties of the algorithms, which moved verbatim. Post-move
 verification: `cargo run --release --example highdim_ml` reproduces the
 `Λ_24` word-error table exactly (385/2000 at radius 1.25, zero budget
 exhaustion), and `cargo run --release --example e8_awgn` passes the shaping
-gate.
+gate. A bench smoke on the same host class (1 s warm-up, 2 s measurement)
+reproduced the CVP shape — warm medians 0.40/1.34/3.50 µs at dimensions
+8/16/24 on the easy/median classes — with identical deterministic
+fingerprints; a full re-baseline on a pinned core remains future work.
 
 ## Barnes–Wall and Leech decoding beyond packing radius *(moved)*
 
