@@ -1,0 +1,46 @@
+[package]
+name = "lattice-engine"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT"
+publish = false
+description = "Closest-vector, sphere, and maximum-likelihood lattice decoding."
+repository = "https://github.com/nanithefkuc/lattice-engine"
+readme = "README.md"
+exclude = ["/.github", "/.plans"]
+
+[features]
+default = ["simd"]
+# Forwards dispatched real-vector transforms in `lattica`; this crate owns no
+# kernel yet, so selection stays single-source one crate down.
+simd = ["lattica/simd"]
+# Unstable implementation APIs, exempt from compatibility guarantees.
+internals = []
+
+[dependencies]
+lattica = { git = "https://github.com/nanithefkuc/lattica", rev = "606eea4c868d80fd145208327220b0ee26a43a0f", default-features = false }
+
+[dev-dependencies]
+criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "fplll_compare"
+harness = false
+
+[[bench]]
+name = "optimization"
+harness = false
+
+[lints.rust]
+missing_docs = "deny"
+# `forbid` lives in src/lib.rs so that integration tests may install a
+# counting global allocator, which requires `unsafe impl GlobalAlloc`.
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+as_conversions = "warn"
+cast_possible_truncation = "warn"
+float_cmp = "warn"
