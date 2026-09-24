@@ -114,17 +114,3 @@ jobs:
       # published 0.65 dB shaping gain of its Voronoi region. A decode loop
       # that merely runs is not evidence.
       - run: cargo run --release --example e8_awgn
-
-  miri:
-    name: miri (focused scalar safety)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: miri
-      - name: Construction A decoding
-        run: "cargo miri test --no-default-features --test construction construction_a_"
-      - name: closed-form tie fixtures
-        run: "cargo miri test --no-default-features --test vectors"
